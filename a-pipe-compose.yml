@@ -1,0 +1,22 @@
+config:
+    domain: http://172.31.238.202
+    headers:
+        - Content-Type:application/json
+    port: 9011
+pipes:
+    hello-world:
+        - say-hello
+    init-server:
+        - create-zone
+        - create-tansport-object
+        - import-robot
+        - create-racks
+        - rack-entry 01 02 03 04
+tasks:
+    create-zone:
+        name: create zone 'kckq'
+        request:
+            api: POST /api/warehouseId/1/zones
+            body: '{"zoneCode":"kckq","zoneName":"","zoneType":"STORAGE_ROBOT","workMode":"SI_CARRY","strideFloor":"","remark":"","createUser":"admin","warehouseId":1,"updateUser":"admin"}'
+    say-hello:
+        name: hello world! this is a-pipe cli.
