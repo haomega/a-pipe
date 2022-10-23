@@ -1,5 +1,49 @@
 package task
 
+import (
+	"fmt"
+	"github.com/spf13/viper"
+)
+
 type Pipe struct {
+	Name  string
 	Tasks []Task
+}
+
+func LoadPipe(pipeName string) (*Pipe, error) {
+	pipeKey := "pipes." + pipeName
+
+	var tasks []Task
+	taskNames := viper.GetStringSlice(pipeKey)
+	for _, taskName := range taskNames {
+		task, err := LoadTask(taskName)
+		if err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, *task)
+	}
+	return &Pipe{pipeName, tasks}, nil
+}
+
+func GetAppConfigPipes() []Pipe {
+	var pipes []Pipe
+	pipesMap := viper.GetStringMap("pipes")
+	for pipeName := range pipesMap {
+		pipe, err := LoadPipe(pipeName)
+		if err != nil {
+			panic(fmt.Errorf("load pipe error %w", err))
+		}
+		pipes = append(pipes, *pipe)
+	}
+	return pipes
+}
+
+func (pipe *Pipe) RunPipe() {
+	fmt.Println("Run pipe", pipe.Name)
+	for _, task := range pipe.Tasks {
+		err := task.RequestApi()
+		if err != nil {
+			fmt.Println("Run task error "+task.Name, err)
+		}
+	}
 }

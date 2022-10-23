@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 type Task struct {
@@ -29,7 +30,7 @@ type Body struct {
 	Data string
 }
 
-func LoadTaskConfig(taskName string) (*Task, error) {
+func LoadTask(taskName string) (*Task, error) {
 	fmt.Println("load", taskName)
 	taskKey := "tasks." + taskName
 	apiKey := taskKey + ".api"
@@ -58,7 +59,9 @@ func LoadTaskConfig(taskName string) (*Task, error) {
 }
 
 func (task *Task) RequestApi() error {
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 3 * time.Second,
+	}
 	api := task.Api
 	body := task.Body
 
@@ -76,10 +79,14 @@ func (task *Task) RequestApi() error {
 			return err
 		}
 		request = req
+		break
+	default:
+		req, _ := http.NewRequest(method, url, nil)
+		request = req
 	}
 
 	// set headers
-	for _, key := range task.Headers {
+	for key := range task.Headers {
 		request.Header.Set(key, task.Headers[key])
 	}
 	// do request
