@@ -27,9 +27,15 @@ var runTask = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("run tasks called")
 		for _, taskName := range args {
-			taskConfig := task.LoadTaskConfig(taskName)
-			fmt.Println(taskConfig)
-			task.HttpRequest(&taskConfig)
+			config, err := task.LoadTaskConfig(taskName)
+			if err != nil {
+				panic(fmt.Errorf("load task fail: %w", err))
+			}
+			fmt.Println("load task config", config)
+			err = config.RequestApi()
+			if err != nil {
+				panic(fmt.Errorf("request for task fail: %w", err))
+			}
 		}
 	},
 }

@@ -1,7 +1,7 @@
 config:
     domain: http://172.31.238.202
     headers:
-        - Content-Type:application/json
+        - Content-type:application/json
     port: 9011
 pipes:
     hello-world:
@@ -14,9 +14,14 @@ pipes:
         - rack-entry 01 02 03 04
 tasks:
     create-zone:
-        name: create zone 'kckq'
-        request:
-            api: POST /api/warehouseId/1/zones
-            body: '{"zoneCode":"kckq","zoneName":"","zoneType":"STORAGE_ROBOT","workMode":"SI_CARRY","strideFloor":"","remark":"","createUser":"admin","warehouseId":1,"updateUser":"admin"}'
+        api: POST /api/warehouseId/1/zones
+        body:
+            data: '{"zoneCode":"kckq","zoneName":"","zoneType":"STORAGE_ROBOT","workMode":"SI_CARRY","strideFloor":"","remark":"","createUser":"admin","warehouseId":1,"updateUser":"admin"}'
+            type: json
     say-hello:
         name: hello world! this is a-pipe cli.
+    upload-map:
+        api: POST /api/warehouseId/1/maps
+        body:
+            data: file=@/Users/hao/Downloads/order-2022-08-08-17-51-04.xlsx
+            type: form-data

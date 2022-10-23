@@ -8,6 +8,6 @@ func GetBaseUrl() string {
 	return domain + ":" + port
 }
 
-func GetHeaders() {
-	viper.GetStringSlice("config.headers")
+func GetBaseHeaders() []string {
+	return viper.GetStringSlice("config.headers")
 }
