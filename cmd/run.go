@@ -15,7 +15,6 @@ var runCmd = &cobra.Command{
 	Short: "run pipes",
 	Long:  `run pipes, pipes are series tasks`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("run pipe called")
 		for _, pipeName := range args {
 			pipe, err := task.LoadPipe(pipeName)
 			if err != nil {
@@ -31,7 +30,6 @@ var runTask = &cobra.Command{
 	Short: "t",
 	Long:  "run tasks",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("run tasks called")
 		for _, taskName := range args {
 			config, err := task.LoadTask(taskName)
 			if err != nil {

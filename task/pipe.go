@@ -2,6 +2,7 @@ package task
 
 import (
 	"fmt"
+	"github.com/k0kubun/go-ansi"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/viper"
 )
@@ -40,7 +41,20 @@ func GetAppConfigPipes() []Pipe {
 }
 
 func (pipe *Pipe) RunPipe() {
-	bar := progressbar.Default(int64(len(pipe.Tasks)))
+	bar := progressbar.NewOptions(len(pipe.Tasks),
+		progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionShowBytes(true),
+		progressbar.OptionSetWidth(15),
+		progressbar.OptionSetDescription("[cyan]Run pipe's tasks...[reset]"),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+	)
 	for _, task := range pipe.Tasks {
 		err := task.RequestApi()
 		if err != nil {
@@ -49,4 +63,5 @@ func (pipe *Pipe) RunPipe() {
 			bar.Add(1)
 		}
 	}
+	bar.Finish()
 }
