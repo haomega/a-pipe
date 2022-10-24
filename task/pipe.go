@@ -2,6 +2,7 @@ package task
 
 import (
 	"fmt"
+	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/viper"
 )
 
@@ -39,11 +40,13 @@ func GetAppConfigPipes() []Pipe {
 }
 
 func (pipe *Pipe) RunPipe() {
-	fmt.Println("Run pipe", pipe.Name)
+	bar := progressbar.Default(int64(len(pipe.Tasks)))
 	for _, task := range pipe.Tasks {
 		err := task.RequestApi()
 		if err != nil {
 			fmt.Println("Run task error "+task.Name, err)
+		} else {
+			bar.Add(1)
 		}
 	}
 }

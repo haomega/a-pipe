@@ -3,12 +3,12 @@ package task
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"github.com/spf13/viper"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -31,7 +31,6 @@ type Body struct {
 }
 
 func LoadTask(taskName string) (*Task, error) {
-	fmt.Println("load", taskName)
 	taskKey := "tasks." + taskName
 	apiKey := taskKey + ".api"
 	headersKey := taskKey + ".headers"
@@ -87,20 +86,21 @@ func (task *Task) RequestApi() error {
 
 	// set headers
 	for key := range task.Headers {
-		request.Header.Set(key, task.Headers[key])
+		if request.Header.Get(key) == "" {
+			request.Header.Set(key, task.Headers[key])
+		}
 	}
 	// do request
 	resp, err := client.Do(request)
 	if err != nil {
 		return err
 	}
-	respBody, _ := io.ReadAll(resp.Body)
-	fmt.Println(resp.StatusCode, string(respBody))
+	_, _ = io.ReadAll(resp.Body)
+	//fmt.Println(task.Name, resp.StatusCode, string(respBody))
 	return nil
 }
 
 func getFormDataRequest(method string, url string, data string) (*http.Request, error) {
-
 	var buffer bytes.Buffer
 
 	writer := multipart.NewWriter(&buffer)
@@ -109,11 +109,10 @@ func getFormDataRequest(method string, url string, data string) (*http.Request, 
 		if pair.Value[0] == '@' {
 			filePath := strings.Replace(pair.Value, "@", "", 1)
 			open, err := os.Open(filePath)
-
 			if err != nil {
 				return nil, errors.New("can not find file")
 			}
-			file, _ := writer.CreateFormFile(pair.Key, pair.Value)
+			file, _ := writer.CreateFormFile(pair.Key, filepath.Base(filePath))
 			io.Copy(file, open)
 		} else {
 			field, _ := writer.CreateFormField(pair.Key)
@@ -122,6 +121,7 @@ func getFormDataRequest(method string, url string, data string) (*http.Request, 
 	}
 	writer.Close()
 	request, _ := http.NewRequest(method, url, &buffer)
+	request.Header.Set("Content-Type", writer.FormDataContentType())
 	return request, nil
 }
 
