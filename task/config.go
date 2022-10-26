@@ -2,12 +2,19 @@ package task
 
 import "github.com/spf13/viper"
 
-func GetBaseUrl() string {
-	domain := viper.GetString("config.domain")
-	port := viper.GetString("config.port")
-	return domain + ":" + port
+type Config struct {
+	Domain  string
+	Port    string
+	Headers []string
 }
 
-func GetBaseHeaders() []string {
-	return viper.GetStringSlice("config.headers")
+func LoadBaseConfig() *Config {
+	domain := viper.GetString("config.domain")
+	port := viper.GetString("config.port")
+	headers := viper.GetStringSlice("config.headers")
+	return &Config{
+		Domain:  domain,
+		Port:    port,
+		Headers: headers,
+	}
 }

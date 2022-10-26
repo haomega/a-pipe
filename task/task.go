@@ -22,7 +22,7 @@ type Task struct {
 
 type Api struct {
 	Method string
-	Path   string
+	Url    string
 }
 
 type Body struct {
@@ -33,6 +33,8 @@ type Body struct {
 func LoadTask(taskName string) (*Task, error) {
 	taskKey := "tasks." + taskName
 	apiKey := taskKey + ".api"
+	customDomainKey := taskKey + ".domain"
+	customPortsKey := taskKey + ".port"
 	headersKey := taskKey + ".headers"
 	bodyTypeKey := taskKey + ".body.type"
 	bodyDataKey := taskKey + ".body.data"
@@ -46,15 +48,28 @@ func LoadTask(taskName string) (*Task, error) {
 		if apiSplit == nil {
 			return nil, errors.New("api conf illagle " + api)
 		}
+		method := apiSplit.Key
+		url := getUrl(viper.GetString(customDomainKey), viper.GetString(customPortsKey), apiSplit.Value)
 
 		return &Task{
 			Name:    taskName,
-			Api:     Api{apiSplit.Key, apiSplit.Value},
+			Api:     Api{method, url},
 			Headers: headers,
 			Body:    Body{bodyType, bodyData},
 		}, nil
 	}
 	return nil, errors.New("task not found " + taskName)
+}
+
+func getUrl(customDomain string, customPort string, path string) string {
+	baseConfig := LoadBaseConfig()
+	if customDomain == "" {
+		customDomain = baseConfig.Domain
+	}
+	if customPort == "" {
+		customPort = baseConfig.Port
+	}
+	return customDomain + customPort + path
 }
 
 func (task *Task) RequestApi() error {
@@ -65,7 +80,7 @@ func (task *Task) RequestApi() error {
 	body := task.Body
 
 	method := api.Method
-	url := GetBaseUrl() + api.Path
+	url := api.Url
 	var request *http.Request
 
 	switch body.Type {
@@ -134,7 +149,7 @@ func getJsonRequest(method string, url string, data string) *http.Request {
 func getHeaders(headerKey string) map[string]string {
 	headerMap := map[string]string{}
 	headers := viper.GetStringSlice(headerKey)
-	baseHeaders := GetBaseHeaders()
+	baseHeaders := LoadBaseConfig().Headers
 	for _, s := range baseHeaders {
 		pair := getKeyValuePair(s, ":")
 		headerMap[pair.Key] = pair.Value
