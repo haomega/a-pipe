@@ -5,24 +5,42 @@ import (
 	"github.com/k0kubun/go-ansi"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/viper"
+	"strings"
 )
 
 type Pipe struct {
 	Name  string
-	Tasks []Task
+	Tasks []TaskWithArg
+}
+
+type TaskWithArg struct {
+	Task Task
+	Args []string
 }
 
 func LoadPipe(pipeName string) (*Pipe, error) {
 	pipeKey := "pipes." + pipeName
 
-	var tasks []Task
-	taskNames := viper.GetStringSlice(pipeKey)
-	for _, taskName := range taskNames {
+	var tasks []TaskWithArg
+	taskDefList := viper.GetStringSlice(pipeKey)
+	for _, taskDef := range taskDefList {
+		var taskName string
+		var args []string
+		splits := strings.Split(taskDef, " ")
+		if len(splits) > 1 {
+			taskName = splits[0]
+			for i := 1; i < len(splits); i++ {
+				args = append(args, splits[i])
+			}
+		} else {
+			taskName = taskDef
+			args = []string{}
+		}
 		task, err := LoadTask(taskName)
 		if err != nil {
 			return nil, err
 		}
-		tasks = append(tasks, *task)
+		tasks = append(tasks, TaskWithArg{Task: *task, Args: args})
 	}
 	return &Pipe{pipeName, tasks}, nil
 }
@@ -55,8 +73,10 @@ func (pipe *Pipe) RunPipe() {
 			BarEnd:        "]",
 		}),
 	)
-	for _, task := range pipe.Tasks {
-		err := task.RequestApi()
+	for _, taskWithArgs := range pipe.Tasks {
+		task := taskWithArgs.Task
+		args := taskWithArgs.Args
+		err := task.RequestApi(args)
 		if err != nil {
 			fmt.Println("Run task error "+task.Name, err)
 		} else {

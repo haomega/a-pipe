@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -69,10 +70,10 @@ func getUrl(customDomain string, customPort string, path string) string {
 	if customPort == "" {
 		customPort = baseConfig.Port
 	}
-	return customDomain + customPort + path
+	return customDomain + ":" + customPort + path
 }
 
-func (task *Task) RequestApi() error {
+func (task *Task) RequestApi(args []string) error {
 	client := &http.Client{
 		Timeout: 3 * time.Second,
 	}
@@ -80,15 +81,16 @@ func (task *Task) RequestApi() error {
 	body := task.Body
 
 	method := api.Method
-	url := api.Url
+	url := expandArgs(api.Url, args)
+	bodyData := expandArgs(body.Data, args)
 	var request *http.Request
 
 	switch body.Type {
 	case "json":
-		request = getJsonRequest(method, url, body.Data)
+		request = getJsonRequest(method, url, bodyData)
 		break
 	case "form-data":
-		req, err := getFormDataRequest(method, url, body.Data)
+		req, err := getFormDataRequest(method, url, bodyData)
 		if err != nil {
 			return err
 		}
@@ -113,6 +115,17 @@ func (task *Task) RequestApi() error {
 	_, _ = io.ReadAll(resp.Body)
 	//fmt.Println(task.Name, resp.StatusCode, string(respBody))
 	return nil
+}
+
+func expandArgs(origin string, args []string) string {
+	return os.Expand(origin, func(s string) string {
+		i, _ := strconv.Atoi(s)
+		if i < len(args) {
+			return args[i]
+		} else {
+			return s
+		}
+	})
 }
 
 func getFormDataRequest(method string, url string, data string) (*http.Request, error) {

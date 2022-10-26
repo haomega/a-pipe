@@ -9,44 +9,44 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var isRunTask bool
+var taskArgs []string
+
 // runCmd represents the run command
 var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "run pipes",
+	Short: "run pipes/tasks",
 	Long:  `run pipes, pipes are series tasks`,
 	Run: func(cmd *cobra.Command, args []string) {
-		for _, pipeName := range args {
-			pipe, err := task.LoadPipe(pipeName)
-			if err != nil {
-				panic(fmt.Errorf("load pipe error: %w", err))
+		if isRunTask {
+			for _, taskName := range args {
+				config, err := task.LoadTask(taskName)
+				if err != nil {
+					panic(fmt.Errorf("load task fail: %w", err))
+				}
+				fmt.Println("load task config", config)
+				err = config.RequestApi(taskArgs)
+				if err != nil {
+					panic(fmt.Errorf("request for task fail: %w", err))
+				}
 			}
-			pipe.RunPipe()
-		}
-	},
-}
-
-var runTask = &cobra.Command{
-	Use:   "task",
-	Short: "t",
-	Long:  "run tasks",
-	Run: func(cmd *cobra.Command, args []string) {
-		for _, taskName := range args {
-			config, err := task.LoadTask(taskName)
-			if err != nil {
-				panic(fmt.Errorf("load task fail: %w", err))
-			}
-			fmt.Println("load task config", config)
-			err = config.RequestApi()
-			if err != nil {
-				panic(fmt.Errorf("request for task fail: %w", err))
+		} else {
+			for _, pipeName := range args {
+				pipe, err := task.LoadPipe(pipeName)
+				if err != nil {
+					panic(fmt.Errorf("load pipe error: %w", err))
+				}
+				pipe.RunPipe()
 			}
 		}
 	},
 }
 
 func init() {
-	runCmd.AddCommand(runTask)
 	rootCmd.AddCommand(runCmd)
+
+	runCmd.PersistentFlags().BoolVarP(&isRunTask, "run task", "t", false, "run -t xxx")
+	runCmd.PersistentFlags().StringArrayVarP(&taskArgs, "task args", "p", []string{}, "run -p 123 456")
 
 	// Here you will define your flags and configuration settings.
 
