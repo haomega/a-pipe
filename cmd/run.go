@@ -9,8 +9,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var isRunTask bool
-var taskArgs []string
+var (
+	isRunTask  bool
+	parameters map[string]string
+)
 
 // runCmd represents the run command
 var runCmd = &cobra.Command{
@@ -25,7 +27,7 @@ var runCmd = &cobra.Command{
 					panic(fmt.Errorf("load task fail: %w", err))
 				}
 				fmt.Println("load task config", config)
-				err = config.RequestApi(taskArgs)
+				err = config.RequestApi(parameters)
 				if err != nil {
 					panic(fmt.Errorf("request for task fail: %w", err))
 				}
@@ -36,7 +38,7 @@ var runCmd = &cobra.Command{
 				if err != nil {
 					panic(fmt.Errorf("load pipe error: %w", err))
 				}
-				pipe.RunPipe()
+				pipe.RunPipe(parameters)
 			}
 		}
 	},
@@ -46,8 +48,7 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 
 	runCmd.PersistentFlags().BoolVarP(&isRunTask, "run task", "t", false, "run -t xxx")
-	runCmd.PersistentFlags().StringArrayVarP(&taskArgs, "task args", "p", []string{}, "run -p 123 456")
-
+	runCmd.PersistentFlags().StringToStringVarP(&parameters, "task parameters", "p", map[string]string{}, "task parameters")
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command

@@ -3,13 +3,13 @@ package task
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/spf13/viper"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -45,7 +45,7 @@ func LoadTask(taskName string) (*Task, error) {
 		headers := getHeaders(headersKey)
 		bodyType := viper.GetString(bodyTypeKey)
 		bodyData := viper.GetString(bodyDataKey)
-		apiSplit := getKeyValuePair(api, " ")
+		apiSplit := GetKeyValuePair(api, " ")
 		if apiSplit == nil {
 			return nil, errors.New("api conf illagle " + api)
 		}
@@ -73,7 +73,7 @@ func getUrl(customDomain string, customPort string, path string) string {
 	return customDomain + ":" + customPort + path
 }
 
-func (task *Task) RequestApi(args []string) error {
+func (task *Task) RequestApi(parameters map[string]string) error {
 	client := &http.Client{
 		Timeout: 3 * time.Second,
 	}
@@ -81,8 +81,12 @@ func (task *Task) RequestApi(args []string) error {
 	body := task.Body
 
 	method := api.Method
-	url := expandArgs(api.Url, args)
-	bodyData := expandArgs(body.Data, args)
+	url, lessPus := expandArgs(api.Url, parameters)
+	bodyData, lessPbs := expandArgs(body.Data, parameters)
+	less := append(lessPus, lessPbs...)
+	if len(less) > 0 {
+		return errors.New("less parameters " + strings.Join(less, ","))
+	}
 	var request *http.Request
 
 	switch body.Type {
@@ -112,20 +116,23 @@ func (task *Task) RequestApi(args []string) error {
 	if err != nil {
 		return err
 	}
-	_, _ = io.ReadAll(resp.Body)
-	//fmt.Println(task.Name, resp.StatusCode, string(respBody))
+	all, err := io.ReadAll(resp.Body)
+	fmt.Println(task.Name, resp.StatusCode, string(all))
 	return nil
 }
 
-func expandArgs(origin string, args []string) string {
-	return os.Expand(origin, func(s string) string {
-		i, _ := strconv.Atoi(s)
-		if i < len(args) {
-			return args[i]
+func expandArgs(origin string, parameters map[string]string) (string, []string) {
+	// 缺少的参数
+	var lessParameters []string
+	return os.Expand(origin, func(p string) string {
+		value := parameters[p]
+		if value != "" {
+			return value
 		} else {
-			return s
+			lessParameters = append(lessParameters, p)
+			return p
 		}
-	})
+	}), lessParameters
 }
 
 func getFormDataRequest(method string, url string, data string) (*http.Request, error) {
@@ -133,7 +140,7 @@ func getFormDataRequest(method string, url string, data string) (*http.Request, 
 
 	writer := multipart.NewWriter(&buffer)
 	for _, s := range strings.Split(data, ";") {
-		pair := getKeyValuePair(s, "=")
+		pair := GetKeyValuePair(s, "=")
 		if pair.Value[0] == '@' {
 			filePath := strings.Replace(pair.Value, "@", "", 1)
 			open, err := os.Open(filePath)
@@ -164,12 +171,12 @@ func getHeaders(headerKey string) map[string]string {
 	headers := viper.GetStringSlice(headerKey)
 	baseHeaders := LoadBaseConfig().Headers
 	for _, s := range baseHeaders {
-		pair := getKeyValuePair(s, ":")
+		pair := GetKeyValuePair(s, ":")
 		headerMap[pair.Key] = pair.Value
 	}
 
 	for _, s := range headers {
-		pair := getKeyValuePair(s, ":")
+		pair := GetKeyValuePair(s, ":")
 		headerMap[pair.Key] = pair.Value
 	}
 
@@ -181,7 +188,7 @@ type KeyValue struct {
 	Value string
 }
 
-func getKeyValuePair(str string, s string) *KeyValue {
+func GetKeyValuePair(str string, s string) *KeyValue {
 	splits := strings.Split(str, s)
 	if len(splits) == 2 {
 		return &KeyValue{splits[0], splits[1]}

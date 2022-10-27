@@ -14,8 +14,8 @@ type Pipe struct {
 }
 
 type TaskWithArg struct {
-	Task Task
-	Args []string
+	Task       Task
+	Parameters map[string]string
 }
 
 func LoadPipe(pipeName string) (*Pipe, error) {
@@ -25,22 +25,22 @@ func LoadPipe(pipeName string) (*Pipe, error) {
 	taskDefList := viper.GetStringSlice(pipeKey)
 	for _, taskDef := range taskDefList {
 		var taskName string
-		var args []string
+		parameters := map[string]string{}
 		splits := strings.Split(taskDef, " ")
 		if len(splits) > 1 {
 			taskName = splits[0]
 			for i := 1; i < len(splits); i++ {
-				args = append(args, splits[i])
+				pair := GetKeyValuePair(splits[i], "=")
+				parameters[pair.Key] = pair.Value
 			}
 		} else {
 			taskName = taskDef
-			args = []string{}
 		}
 		task, err := LoadTask(taskName)
 		if err != nil {
 			return nil, err
 		}
-		tasks = append(tasks, TaskWithArg{Task: *task, Args: args})
+		tasks = append(tasks, TaskWithArg{Task: *task, Parameters: parameters})
 	}
 	return &Pipe{pipeName, tasks}, nil
 }
@@ -58,13 +58,13 @@ func GetAppConfigPipes() []Pipe {
 	return pipes
 }
 
-func (pipe *Pipe) RunPipe() {
+func (pipe *Pipe) RunPipe(parameters map[string]string) {
 	bar := progressbar.NewOptions(len(pipe.Tasks),
 		progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
 		progressbar.OptionEnableColorCodes(true),
 		progressbar.OptionShowBytes(true),
 		progressbar.OptionSetWidth(15),
-		progressbar.OptionSetDescription("[cyan]Run pipe's tasks...[reset]"),
+		progressbar.OptionSetDescription("[cyan]Run...[reset]"),
 		progressbar.OptionSetTheme(progressbar.Theme{
 			Saucer:        "[green]=[reset]",
 			SaucerHead:    "[green]>[reset]",
@@ -75,12 +75,15 @@ func (pipe *Pipe) RunPipe() {
 	)
 	for _, taskWithArgs := range pipe.Tasks {
 		task := taskWithArgs.Task
-		args := taskWithArgs.Args
-		err := task.RequestApi(args)
+		ps := taskWithArgs.Parameters
+		// merge parameters
+		for p := range parameters {
+			ps[p] = parameters[p]
+		}
+		bar.Add(1)
+		err := task.RequestApi(ps)
 		if err != nil {
 			fmt.Println("Run task error "+task.Name, err)
-		} else {
-			bar.Add(1)
 		}
 	}
 	bar.Finish()
