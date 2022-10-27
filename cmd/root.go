@@ -47,8 +47,7 @@ func init() {
 	viper.AddConfigPath("$HOME/.a-pipe")      // call multiple times to add many search paths
 	viper.AddConfigPath(".")                  // optionally look for config in the working directory
 	err = viper.ReadInConfig()                // Find and read the config file
-	fmt.Println("aa")
-	if err != nil { // Handle errors reading the config file
+	if err != nil {                           // Handle errors reading the config file
 		panic(fmt.Errorf("fatal error config file: %w", err))
 	}
 	err = viper.WriteConfig()
